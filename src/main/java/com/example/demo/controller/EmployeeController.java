@@ -39,29 +39,40 @@ public class EmployeeController {
 		}
 	}
 
-	@GetMapping("/getEmployeeById/{id}")
-	public ResponseEntity<Double> getTaxDeductions(@PathVariable String id) {
-		Optional<Employee> employee = Optional.ofNullable(employeeRepository.findById(id)
-				.orElseThrow(() -> new NoSuchEmployeeExistsException("NO Employee PRESENT WITH ID = " + id)));
+	@GetMapping("/tax-deduction/{employeeId}")
+	public ResponseEntity<TaxDeductionEmployee> getTaxDeductions(@PathVariable String employeeId) {
+		Optional<Employee> employee = Optional.ofNullable(employeeRepository.findById(employeeId)
+				.orElseThrow(() -> new NoSuchEmployeeExistsException("NO Employee PRESENT WITH ID = " + employeeId)));
 		if (employee.isPresent()) {
-			Double d = getTaxDeduction(employee.get().getSalary(),employee.get().getDoj());
-			return new ResponseEntity<>(d, HttpStatus.OK);
+			Double yearlySalary = calculateYearlySalary(employee.get().getSalary(), employee.get().getDoj());
+			Double tax = getTaxDeduction(yearlySalary);
+			TaxDeductionEmployee te = new TaxDeductionEmployee();
+			te.setTaxAmount(tax);
+			te.setFirstName(employee.get().getFirstName());
+			te.setLastName(employee.get().getLastName());
+			te.setYearlySalary(yearlySalary);
+			te.setCessAmount(calculateCessAmount(yearlySalary));
+			return new ResponseEntity<>(te, HttpStatus.OK);
 		}
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
-	private static Double getTaxDeduction(Double income, Date date) {
-		
-		Format f= new SimpleDateFormat("yyyy-MM-dd");
-		LocalDate start= LocalDate.parse(f.format(date));
-		LocalDate last= LocalDate.parse("2025-03-31");
-		long dif= ChronoUnit.DAYS.between(start, last);
-		
-		Double salinMonths=income/12;
-		double salindays=salinMonths/30;
-		
-		Double actualIncome=dif*salindays;
-		
+	private Double calculateYearlySalary(Double salary, Date doj) {
+		Format f = new SimpleDateFormat("yyyy-MM-dd");
+		LocalDate start = LocalDate.parse(f.format(doj));
+		LocalDate last = LocalDate.parse("2025-03-31");
+		long dif = ChronoUnit.DAYS.between(start, last);
+
+		Double salinMonths = salary / 12;
+		//let's assume we have 30 days per month
+		double salindays = salinMonths / 30;
+
+		Double actualIncome = dif * salindays;
+		return actualIncome;
+	}
+
+	private static Double getTaxDeduction(Double actualIncome) {
+
 		double tax = 0, chass = 0;
 		double appIncome = 0;
 		if (actualIncome <= 250000) {
@@ -77,10 +88,17 @@ public class EmployeeController {
 			tax = 62500 + (0.2 * appIncome);
 		}
 		if (actualIncome >= 2800000) {
-			chass = (0.2 * tax);
+			chass = calculateCessAmount(actualIncome);
 
 		}
 		return tax + chass;
 	}
 
+	private static double calculateCessAmount(double yearlySalary) {
+		if (yearlySalary > 2800000) {
+			return 0.02 * (yearlySalary - 250000);
+		} else {
+			return 0;
+		}
+	}
 }
