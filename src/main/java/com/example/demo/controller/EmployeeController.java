@@ -1,6 +1,11 @@
 package com.example.demo.controller;
 
+import java.text.Format;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,28 +44,39 @@ public class EmployeeController {
 		Optional<Employee> employee = Optional.ofNullable(employeeRepository.findById(id)
 				.orElseThrow(() -> new NoSuchEmployeeExistsException("NO Employee PRESENT WITH ID = " + id)));
 		if (employee.isPresent()) {
-			Double d = getTaxDeduction(employee.get().getSalary());
+			Double d = getTaxDeduction(employee.get().getSalary(),employee.get().getDoj());
 			return new ResponseEntity<>(d, HttpStatus.OK);
 		}
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
-	private static Double getTaxDeduction(Double income) {
+	private static Double getTaxDeduction(Double income, Date date) {
+		
+		Format f= new SimpleDateFormat("yyyy-MM-dd");
+		LocalDate start= LocalDate.parse(f.format(date));
+		LocalDate last= LocalDate.parse("2025-03-31");
+		long dif= ChronoUnit.DAYS.between(start, last);
+		
+		Double salinMonths=income/12;
+		double salindays=salinMonths/30;
+		
+		Double actualIncome=dif*salindays;
+		
 		double tax = 0, chass = 0;
 		double appIncome = 0;
-		if (income <= 250000) {
+		if (actualIncome <= 250000) {
 			tax = 0;
-		} else if (income >= 250001 && income <= 500000) {
-			appIncome = income - 250000;
+		} else if (actualIncome >= 250001 && actualIncome <= 500000) {
+			appIncome = actualIncome - 250000;
 			tax = 0.05 * appIncome;
-		} else if (income >= 500001 && income <= 1000000) {
-			appIncome = income - 500000;
+		} else if (actualIncome >= 500001 && actualIncome <= 1000000) {
+			appIncome = actualIncome - 500000;
 			tax = 12500 + (0.1 * appIncome);
 		} else {
-			appIncome = income - 1000000;
+			appIncome = actualIncome - 1000000;
 			tax = 62500 + (0.2 * appIncome);
 		}
-		if (income >= 2800000) {
+		if (actualIncome >= 2800000) {
 			chass = (0.2 * tax);
 
 		}
