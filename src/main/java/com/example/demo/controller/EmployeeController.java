@@ -14,22 +14,25 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.exception.NoSuchEmployeeExistsException;
 import com.example.demo.model.Employee;
-import com.example.demo.repository.EmployeeRepository;
+import com.example.demo.model.TaxDeductionEmployee;
+import com.example.demo.service.EmployeeService;
 
 @RestController
 public class EmployeeController {
 	@Autowired
-	private EmployeeRepository employeeRepository;
+    private EmployeeService employeeService;
 
 	@GetMapping("/getAllEmployess")
 	public ResponseEntity<List<Employee>> getAllEmployess() {
 		List<Employee> employee = new ArrayList<Employee>();
 		try {
-			employeeRepository.findAll().forEach(employee::add);
+			employeeService.getAllEmployees().forEach(employee::add);
 			if (employee.isEmpty()) {
 				return new ResponseEntity<>(employee, HttpStatus.NO_CONTENT);
 			}
@@ -38,10 +41,13 @@ public class EmployeeController {
 			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
-
+	@PostMapping
+    public Employee createEmployee( @RequestBody Employee employee) {
+        return employeeService.createEmployee(employee);
+    }
 	@GetMapping("/tax-deduction/{employeeId}")
 	public ResponseEntity<TaxDeductionEmployee> getTaxDeductions(@PathVariable String employeeId) {
-		Optional<Employee> employee = Optional.ofNullable(employeeRepository.findById(employeeId)
+		Optional<Employee> employee = Optional.ofNullable(employeeService.getEmployeeById(employeeId)
 				.orElseThrow(() -> new NoSuchEmployeeExistsException("NO Employee PRESENT WITH ID = " + employeeId)));
 		if (employee.isPresent()) {
 			Double yearlySalary = calculateYearlySalary(employee.get().getSalary(), employee.get().getDoj());

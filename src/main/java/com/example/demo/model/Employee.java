@@ -36,7 +36,6 @@ public class Employee {
 	private Double salary;
 	
 	@Email(regexp = "[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,3}")
-	private String email;
 	public Employee(String id, String firstName, String lastName, List<String> phoneNumbers, Date doj, Double salary,
 			String email) {
 		super();
